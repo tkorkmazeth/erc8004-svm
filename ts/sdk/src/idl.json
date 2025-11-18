@@ -1,0 +1,422 @@
+{
+  "version": "0.1.0",
+  "name": "erc8004_svm",
+  "instructions": [
+    {
+      "name": "initPlatform",
+      "accounts": [
+        { "name": "platform", "isMut": true, "isSigner": false },
+        { "name": "authority", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    },
+    {
+      "name": "agentRegister",
+      "accounts": [
+        { "name": "platform", "isMut": true, "isSigner": false },
+        { "name": "authority", "isMut": true, "isSigner": true },
+        { "name": "owner", "isMut": true, "isSigner": true },
+        { "name": "agent", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false },
+        { "name": "mint", "isMut": false, "isSigner": false, "isOptional": true }
+      ],
+      "args": [
+        { "name": "tokenUri", "type": "string" }
+      ]
+    },
+    {
+      "name": "agentSetMetadata",
+      "accounts": [
+        { "name": "agent", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": true, "isSigner": true },
+        { "name": "meta", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "key", "type": "string" },
+        { "name": "value", "type": { "vec": "u8" } },
+        { "name": "keyHash", "type": { "array": ["u8", 32] } }
+      ]
+    },
+    {
+      "name": "giveFeedbackEd25519",
+      "accounts": [
+        { "name": "agent", "isMut": false, "isSigner": false },
+        { "name": "client", "isMut": true, "isSigner": true },
+        { "name": "idx", "isMut": true, "isSigner": false },
+        { "name": "feedback", "isMut": true, "isSigner": false },
+        { "name": "ixSysvar", "isMut": false, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "score", "type": "u8" },
+        { "name": "tag1", "type": { "array": ["u8", 32] } },
+        { "name": "tag2", "type": { "array": ["u8", 32] } },
+        { "name": "fileUri", "type": "string" },
+        { "name": "fileHash", "type": { "array": ["u8", 32] } },
+        { "name": "authStructBytes", "type": { "vec": "u8" } },
+        { "name": "signature", "type": { "vec": "u8" } },
+        { "name": "expectedIndex", "type": "u64" }
+      ]
+    },
+    {
+      "name": "revokeFeedback",
+      "accounts": [
+        { "name": "feedback", "isMut": true, "isSigner": false },
+        { "name": "client", "isMut": true, "isSigner": true }
+      ],
+      "args": [
+        { "name": "index", "type": "u64" }
+      ]
+    },
+    {
+      "name": "validationRequest",
+      "accounts": [
+        { "name": "agent", "isMut": false, "isSigner": false },
+        { "name": "owner", "isMut": true, "isSigner": true },
+        { "name": "request", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "validator", "type": "publicKey" },
+        { "name": "requestUri", "type": "string" },
+        { "name": "requestHash", "type": { "array": ["u8", 32] } }
+      ]
+    },
+    {
+      "name": "validationResponse",
+      "accounts": [
+        { "name": "request", "isMut": true, "isSigner": false },
+        { "name": "validator", "isMut": true, "isSigner": true },
+        { "name": "responseAcc", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "response", "type": "u8" },
+        { "name": "responseUri", "type": "string" },
+        { "name": "responseHash", "type": { "array": ["u8", 32] } },
+        { "name": "tag", "type": { "array": ["u8", 32] } }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Platform",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "authority", "type": "publicKey" },
+          { "name": "agentCounter", "type": "u64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "Agent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "id", "type": "u64" },
+          { "name": "owner", "type": "publicKey" },
+          { "name": "tokenMint", "type": { "option": "publicKey" } },
+          { "name": "tokenUri", "type": "string" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "MetaKV",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "agent", "type": "publicKey" },
+          { "name": "keyHash", "type": { "array": ["u8", 32] } },
+          { "name": "value", "type": { "vec": "u8" } },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "ClientIndex",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "agent", "type": "publicKey" },
+          { "name": "client", "type": "publicKey" },
+          { "name": "lastIndex", "type": "u64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "Feedback",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "agent", "type": "publicKey" },
+          { "name": "client", "type": "publicKey" },
+          { "name": "index", "type": "u64" },
+          { "name": "score", "type": "u8" },
+          { "name": "tag1", "type": { "array": ["u8", 32] } },
+          { "name": "tag2", "type": { "array": ["u8", 32] } },
+          { "name": "revoked", "type": "bool" },
+          { "name": "fileUri", "type": "string" },
+          { "name": "fileHash", "type": { "array": ["u8", 32] } },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "ValidationRequest",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "agent", "type": "publicKey" },
+          { "name": "validator", "type": "publicKey" },
+          { "name": "requestUri", "type": "string" },
+          { "name": "requestHash", "type": { "array": ["u8", 32] } },
+          { "name": "timestamp", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "ValidationResponse",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "request", "type": "publicKey" },
+          { "name": "validator", "type": "publicKey" },
+          { "name": "agent", "type": "publicKey" },
+          { "name": "response", "type": "u8" },
+          { "name": "tag", "type": { "array": ["u8", 32] } },
+          { "name": "lastUpdate", "type": "i64" },
+          { "name": "responseUri", "type": "string" },
+          { "name": "responseHash", "type": { "array": ["u8", 32] } },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "Unauthorized", "msg": "Unauthorized" },
+    { "code": 6001, "name": "AgentNotFound", "msg": "Agent not found" },
+    { "code": 6002, "name": "InvalidScore", "msg": "Invalid score" },
+    { "code": 6003, "name": "InvalidResponse", "msg": "Invalid response" },
+    { "code": 6004, "name": "ExpiredAuth", "msg": "Expired authorization" },
+    { "code": 6005, "name": "IndexLimit", "msg": "Index limit exceeded" },
+    { "code": 6006, "name": "SelfFeedback", "msg": "Self feedback not allowed" },
+    { "code": 6007, "name": "RequestExists", "msg": "Request already exists" },
+    { "code": 6008, "name": "RequestNotFound", "msg": "Request not found" },
+    { "code": 6009, "name": "BadSignature", "msg": "Signature invalid" }
+  ],
+  "metadata": {
+    "address": "E8oo4svm1111111111111111111111111111111111"
+  }
+}
+{
+  "version": "0.1.0",
+  "name": "erc8004_svm",
+  "instructions": [
+    {
+      "name": "initPlatform",
+      "accounts": [
+        { "name": "platform", "isMut": true, "isSigner": false },
+        { "name": "authority", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    },
+    {
+      "name": "agentRegister",
+      "accounts": [
+        { "name": "platform", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": true, "isSigner": true },
+        { "name": "agent", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "tokenUri", "type": "string" }
+      ]
+    },
+    {
+      "name": "agentSetMetadata",
+      "accounts": [
+        { "name": "agent", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": true, "isSigner": true },
+        { "name": "meta", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "key", "type": "string" },
+        { "name": "value", "type": { "vec": "u8" } }
+      ]
+    },
+    {
+      "name": "giveFeedback",
+      "accounts": [
+        { "name": "agent", "isMut": false, "isSigner": false },
+        { "name": "client", "isMut": true, "isSigner": true },
+        { "name": "idx", "isMut": true, "isSigner": false },
+        { "name": "feedback", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "score", "type": "u8" },
+        { "name": "tag1", "type": { "array": ["u8", 32] } },
+        { "name": "tag2", "type": { "array": ["u8", 32] } },
+        { "name": "fileUri", "type": "string" },
+        { "name": "fileHash", "type": { "array": ["u8", 32] } },
+        { "name": "authBytes", "type": { "vec": "u8" } }
+      ]
+    },
+    {
+      "name": "revokeFeedback",
+      "accounts": [
+        { "name": "feedback", "isMut": true, "isSigner": false },
+        { "name": "client", "isMut": true, "isSigner": true }
+      ],
+      "args": [
+        { "name": "index", "type": "u64" }
+      ]
+    },
+    {
+      "name": "validationRequest",
+      "accounts": [
+        { "name": "agent", "isMut": false, "isSigner": false },
+        { "name": "owner", "isMut": true, "isSigner": true },
+        { "name": "request", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "validator", "type": "publicKey" },
+        { "name": "requestUri", "type": "string" },
+        { "name": "requestHash", "type": { "array": ["u8", 32] } }
+      ]
+    },
+    {
+      "name": "validationResponse",
+      "accounts": [
+        { "name": "request", "isMut": true, "isSigner": false },
+        { "name": "validator", "isMut": true, "isSigner": true },
+        { "name": "responseAcc", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "response", "type": "u8" },
+        { "name": "responseUri", "type": "string" },
+        { "name": "responseHash", "type": { "array": ["u8", 32] } },
+        { "name": "tag", "type": { "array": ["u8", 32] } }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Platform",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "authority", "type": "publicKey" },
+          { "name": "agentCounter", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "Agent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "id", "type": "u64" },
+          { "name": "owner", "type": "publicKey" },
+          { "name": "tokenMint", "type": { "option": "publicKey" } },
+          { "name": "tokenUri", "type": "string" }
+        ]
+      }
+    },
+    {
+      "name": "MetaKV",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "agent", "type": "publicKey" },
+          { "name": "keyHash", "type": { "array": ["u8", 32] } },
+          { "name": "value", "type": { "vec": "u8" } }
+        ]
+      }
+    },
+    {
+      "name": "ClientIndex",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "agent", "type": "publicKey" },
+          { "name": "client", "type": "publicKey" },
+          { "name": "lastIndex", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "Feedback",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "agent", "type": "publicKey" },
+          { "name": "client", "type": "publicKey" },
+          { "name": "index", "type": "u64" },
+          { "name": "score", "type": "u8" },
+          { "name": "tag1", "type": { "array": ["u8", 32] } },
+          { "name": "tag2", "type": { "array": ["u8", 32] } },
+          { "name": "revoked", "type": "bool" },
+          { "name": "fileUri", "type": "string" },
+          { "name": "fileHash", "type": { "array": ["u8", 32] } }
+        ]
+      }
+    },
+    {
+      "name": "ValidationRequest",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "agent", "type": "publicKey" },
+          { "name": "validator", "type": "publicKey" },
+          { "name": "requestUri", "type": "string" },
+          { "name": "requestHash", "type": { "array": ["u8", 32] } },
+          { "name": "timestamp", "type": "i64" }
+        ]
+      }
+    },
+    {
+      "name": "ValidationResponse",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "request", "type": "publicKey" },
+          { "name": "validator", "type": "publicKey" },
+          { "name": "agent", "type": "publicKey" },
+          { "name": "response", "type": "u8" },
+          { "name": "tag", "type": { "array": ["u8", 32] } },
+          { "name": "lastUpdate", "type": "i64" },
+          { "name": "responseUri", "type": "string" },
+          { "name": "responseHash", "type": { "array": ["u8", 32] } }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "Unauthorized", "msg": "Unauthorized" },
+    { "code": 6001, "name": "AgentNotFound", "msg": "Agent not found" },
+    { "code": 6002, "name": "InvalidScore", "msg": "Invalid score" },
+    { "code": 6003, "name": "InvalidResponse", "msg": "Invalid response" },
+    { "code": 6004, "name": "ExpiredAuth", "msg": "Expired authorization" },
+    { "code": 6005, "name": "IndexLimit", "msg": "Index limit exceeded" },
+    { "code": 6006, "name": "SelfFeedback", "msg": "Self feedback not allowed" },
+    { "code": 6007, "name": "RequestExists", "msg": "Request already exists" },
+    { "code": 6008, "name": "RequestNotFound", "msg": "Request not found" },
+    { "code": 6009, "name": "BadSignature", "msg": "Signature invalid" }
+  ],
+  "metadata": {
+    "address": "E8oo4svm1111111111111111111111111111111111"
+  }
+}
+

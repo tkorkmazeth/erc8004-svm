@@ -1,0 +1,23 @@
+[package]
+name = "erc8004-svm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "erc8004_svm"
+
+[features]
+default = []
+no-entrypoint = []
+no-idl = []
+idl-build = []
+client = []
+anchor-debug = []
+cpi = []
+no-log-ix-name = []
+
+[dependencies]
+anchor-lang = { workspace = true, features = ["init-if-needed"] }
+anchor-spl = { workspace = true, features = ["token"] }
+solana-program = { workspace = true }

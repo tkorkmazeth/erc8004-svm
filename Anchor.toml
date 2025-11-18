@@ -1,0 +1,15 @@
+[programs.localnet]
+erc8004_svm = "F3471nQ1BYRVUL2RUGRfC5JToakHkweBmLAMoMFBjo9d"
+
+[programs.devnet]
+erc8004_svm = "F3471nQ1BYRVUL2RUGRfC5JToakHkweBmLAMoMFBjo9d"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[toolchain]
+anchor_version = "0.30.1"
+
+[scripts]
+test = "yarn --cwd ts/sdk test"
